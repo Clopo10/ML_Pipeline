@@ -3,3 +3,12 @@
 
 # Venv
 /venv/
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing caches
+.pytest_cache/
