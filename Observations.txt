@@ -1,0 +1,50 @@
+CHALLENGE:
+- Predict sepsis 6 hours ahead.
+
+DATA:
+- Data Type: Time-series tabular
+- The data is extracted from 2 different hospitals (Hospital A: 20,336 subjects; Hospital B: 20,000 subjects)
+- Each row of the table provides a collection of measurements at the same time
+- The sepsis labels in the training data have already been shifted ahead by six hours
+- There are 40 time-dependent variables
+- Entries of NaN (not a number) indicate that there was no recorded measurement of a variable at the time interval.
+- Sepsis percentage: 1.3% (extremely imbalanced)
+- Missing values percentage: >90% (very high missingness)
+- Domain Shift: high variance between sources (hospital A vs hospital B)
+
+Model:
+- Model Type: XGBClassifier (it builds decision trees)
+- It accepts Nan and doesn't need normalization
+
+APPROACH:
+- Step 1: I split the raw data into the 2 distinct hospitals (data/processed/test_hospital_B.parquet & train_hospital_A.parquet)
+    * I decided to use hospital A for training and Hospital B for testing.
+    * I used parquet instead of csv format because parquet loads the data by columns not by rows and that will help with calculating the medians.
+
+- Step 2: Data truncation
+    * In order to prevent data leakage I permanently deleted all rows of data that occured more than 6 hours after Sepsis diagnosis.
+    * After 6 hours of positive sepsis label the doctors detected sepsis and sstarting treating it.
+
+- Step 3: Engineering Missingness Flags
+    * Before filling any missing data, I created counters for lab orders (Lactate_Order_Count). When a doctor orders a lab test he is getting suspicious and the model should know that.
+
+- Step 4: Cleaning data (filling misssing values)
+    * I used forward-fill (ffill) patient-by-patient assuming a patient's vital sign will remain stable until we measure again.
+    * I filled any remaining Nan values with hospital A's global medians.
+    * To prevent data leakage, we used hospital A's global medians on hospital.
+
+- Step 5: Feature Engineering
+    * I used qSOFA and SIRS to build a System_Overload_Score.
+    * I made an Age_Frailty_Index.
+    * I made rolling windows for mean & std of vitals
+    * I made admisssion deltas (changes from hour 1)
+
+- Step 6: Training baseline_model and making error analysis + SHAP analysis to find best features
+
+- Step 8: Hyperparameter tuning
+
+- Step 9: Training final tuned model and saving it
+
+- Step 10: Making inference script (src/inference.py)
+
+- Step 11: Making api script (api/app.py)
